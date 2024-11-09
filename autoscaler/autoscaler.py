@@ -37,7 +37,7 @@ def check_cpu_usage():
 def spawn_new_vm():
     conn = libvirt.open('qemu:///system')
     xml = """<domain type='kvm'>
-                <name>sanju</name>
+                <name>prani</name>
                 <memory unit='KiB'>1048576</memory>
                 <vcpu placement='static'>1</vcpu>
                 <os>
