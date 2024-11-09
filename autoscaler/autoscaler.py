@@ -3,17 +3,31 @@ import time
 
 # Function to monitor CPU usage
 def get_cpu_usage(domain):
-    stats = domain.interfaceStats('eth0')  # Change interface name if needed
-    return stats[0]  # Return CPU usage percentage (for example)
+    # Get the initial CPU time
+    initial_stats = domain.getCPUStats(True)[0]
+    initial_cpu_time = initial_stats['cpu_time']
+
+    # Wait for a short interval to calculate the change
+    time.sleep(1)
+
+    # Get the CPU time again after 1 second
+    final_stats = domain.getCPUStats(True)[0]
+    final_cpu_time = final_stats['cpu_time']
+
+    # Calculate CPU usage as a percentage
+    cpu_time_diff = final_cpu_time - initial_cpu_time
+    cpu_usage_percent = (cpu_time_diff / 1e9) * 100  # Convert nanoseconds to seconds and calculate percentage
+    
+    return cpu_usage_percent
 
 # Function to check if CPU usage exceeds threshold
 def check_cpu_usage():
     conn = libvirt.open('qemu:///system')
-    domain = conn.lookupByName('server-1')  # Replace with your VM name
+    domain = conn.lookupByName('ubuntu24.10')  # Replace with your VM name
     cpu_usage = get_cpu_usage(domain)
-    print(f"Current CPU usage: {cpu_usage}%")
+    print(f"Current CPU usage: {cpu_usage:.2f}%")
     
-    if cpu_usage > 80:  # Example threshold
+    if cpu_usage > 1:
         print("CPU usage is too high! Spawning a new server.")
         spawn_new_vm()
     
@@ -23,7 +37,7 @@ def check_cpu_usage():
 def spawn_new_vm():
     conn = libvirt.open('qemu:///system')
     xml = """<domain type='kvm'>
-                <name>server-2</name>
+                <name>sanju</name>
                 <memory unit='KiB'>1048576</memory>
                 <vcpu placement='static'>1</vcpu>
                 <os>
@@ -33,16 +47,17 @@ def spawn_new_vm():
                 <devices>
                     <disk type='file' device='disk'>
                         <driver name='qemu' type='qcow2'/>
-                        <source file='/var/lib/libvirt/images/server-2.qcow2'/>
+                        <source file='/var/lib/libvirt/images/ubuntu24.10-2.qcow2'/>
                         <target dev='vda' bus='virtio'/>
                     </disk>
                     <interface type='network'>
                         <mac address='52:54:00:ae:ad:01'/>
-                        <source bridge='virbr0'/>
+                        <source network='default'/>  <!-- Replace 'default' with your actual network name -->
                         <model type='virtio'/>
                     </interface>
                 </devices>
             </domain>"""
+
     
     domain = conn.createXML(xml, 0)  # Create the VM from the XML definition
     print(f"Created VM {domain.name()}")
